@@ -1,6 +1,6 @@
 import streamlit as st
 import pydeck as pdk
-
+import pandas as pd
 
 def show_map(lat, lon, radius_meters, events):
     COLOR_RANGE = [
@@ -18,6 +18,25 @@ def show_map(lat, lon, radius_meters, events):
             if val < b:
                 return COLOR_RANGE[i]
         return COLOR_RANGE[i]
+
+    # Load Walmart data from CSV
+    walmart_data = pd.read_csv("walmart_2018_11_06.csv")
+    
+    # Prepare Walmart locations
+    walmart_features = []
+    for _, row in walmart_data.iterrows():
+        walmart_features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [row['longitude'], row['latitude']]
+            },
+            "name": row['name'],
+            "address": f"{row['street_address']}, {row['city']}, {row['state']} {row['zip_code']}",
+            "phone": row['phone_number_1'],
+            "hours": row['open_hours'],
+            "url": row['url']
+        })
 
     geojson_features = []
 
@@ -90,6 +109,25 @@ def show_map(lat, lon, radius_meters, events):
                     get_size=30,
                     pickable=False,
                 ),
+                # Walmart locations layer
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=walmart_features,
+                    get_position="geometry.coordinates",
+                    get_radius=100,
+                    get_fill_color=[255, 255, 0, 180],  # Red color for Walmart locations
+                    pickable=True,
+                    auto_highlight=True,
+                    tooltip={
+                        "html": """
+                            <p><b>{name}</b></p>
+                            <p>{address}</p>
+                            <p>Phone: {phone}</p>
+                            <p>Hours: {hours}</p>
+                            <p><a href="{url}" target="_blank">View Details</a></p>
+                        """
+                    }
+                ),
                 # Point-type events layer
                 pdk.Layer(
                     "GeoJsonLayer",
@@ -125,4 +163,7 @@ def show_map(lat, lon, radius_meters, events):
                 ),
             ],
         )
+        
     )
+
+    
