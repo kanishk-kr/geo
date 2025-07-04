@@ -347,13 +347,16 @@ def show_events_list(events):
         events_df,
         use_container_width=True,
         hide_index=True,
-        column_order=["Event Title", "PHQ Attendance", "Category", "Start Date (local tz)", "Venue Name"],
+        column_order=["Event Title", "PHQ Attendance", "Category", "Start Date (local tz)","End Date (local tz)","Predicted End Date (local tz)", "Predicted Event Spend", "Predicted Event Spend (Hospitality)","Venue Name", "Venue Address"],
         column_config={
             "Event Title": st.column_config.TextColumn("Event", width="medium"),
             "PHQ Attendance": st.column_config.NumberColumn("Attendance", format="%d"),
             "Category": st.column_config.TextColumn("Category"),
             "Start Date (local tz)": st.column_config.DatetimeColumn("Start Date"),
-            "predicted_event_spend": st.column_config.NumberColumn("Predicted Spend", format="$%.2f"),
+            "End Date (local tz)": st.column_config.DatetimeColumn("End Date"),
+            "Predicted End Date (local tz)": st.column_config.DatetimeColumn("Predicted End Date"),
+            # Use a custom format for predicted spend
+            "Predicted Event Spend": st.column_config.NumberColumn("Predicted Spend", format="$%.2f"),
             "Venue Name": st.column_config.TextColumn("Venue", width="medium"),
             "Venue Address": st.column_config.TextColumn("Address", width="large"),
             "Placekey": st.column_config.TextColumn("Placekey", width="medium"),
