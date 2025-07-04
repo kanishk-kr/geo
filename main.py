@@ -1,6 +1,6 @@
 import streamlit as st
-from openai import OpenAI  # Add this import at the top of your file
-import openai
+
+
 import uuid
 
 import groq
