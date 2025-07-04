@@ -44,10 +44,7 @@ def main():
     # Initialize session state
     if "google_session_token" not in st.session_state:
         st.session_state.google_session_token = uuid.uuid4().hex
-    
-    # Set LLM API key (store this in secrets)
-    if "openai_key" in st.secrets:
-        openai.api_key = st.secrets["openai_key"]
+
     
     if get_api_key() is not None:
         show_address_lookup()
@@ -316,14 +313,30 @@ def show_events_list(events):
         venue = next(filter(lambda entity: entity["type"] == "venue", event["entities"]), None)
         
         row = {
-            "Event Title": event["title"],
+                  "Event Title": event["title"],
             "PHQ Attendance": event["phq_attendance"] if event["phq_attendance"] else 0,
             "Category": event["category"],
             "Start Date (local tz)": parse_date(event["start"])
             .astimezone(pytz.timezone(event["timezone"]))
             .strftime("%d-%b-%Y %H:%M"),
+            "End Date (local tz)": parse_date(event["end"])
+            .astimezone(pytz.timezone(event["timezone"]))
+            .strftime("%d-%b-%Y %H:%M"),
+            "Predicted End Date (local tz)": parse_date(event["predicted_end"])
+            .astimezone(pytz.timezone(event["timezone"]))
+            .strftime("%d-%b-%Y %H:%M")
+            if "predicted_end" in event and event["predicted_end"] is not None
+            else "",
             "Venue Name": venue["name"] if venue else "",
             "Venue Address": venue["formatted_address"] if venue else "",
+            "Placekey": event["geo"]["placekey"] if "geo" in event and "placekey" in event["geo"] else "",
+            "Predicted Event Spend": f"${event['predicted_event_spend']:,.0f}"
+            if "predicted_event_spend" in event and event["predicted_event_spend"] is not None
+            else "",
+            "Predicted Event Spend (Hospitality)": f"${event['predicted_event_spend_industries']['hospitality']:,.0f}"
+            if "predicted_event_spend_industries" in event
+            and event["predicted_event_spend_industries"]["hospitality"] is not None
+            else "",
         }
         results.append(row)
 
@@ -340,6 +353,12 @@ def show_events_list(events):
             "PHQ Attendance": st.column_config.NumberColumn("Attendance", format="%d"),
             "Category": st.column_config.TextColumn("Category"),
             "Start Date (local tz)": st.column_config.DatetimeColumn("Start Date"),
+            "predicted_event_spend": st.column_config.NumberColumn("Predicted Spend", format="$%.2f"),
+            "Venue Name": st.column_config.TextColumn("Venue", width="medium"),
+            "Venue Address": st.column_config.TextColumn("Address", width="large"),
+            "Placekey": st.column_config.TextColumn("Placekey", width="medium"),
+   
+            "Predicted Event Spend (Hospitality)": st.column_config.TextColumn("Hospitality Spend", width="medium"),
         }
     )
     
@@ -359,7 +378,7 @@ def show_events_list(events):
             st.markdown(
                 f"""
                 <div style="
-                    background: #f8f9fa;
+                    background: #000000;
                     padding: 15px;
                     border-radius: 10px;
                     border-left: 4px solid #2d8b49;
@@ -370,8 +389,7 @@ def show_events_list(events):
                 unsafe_allow_html=True
             )    
         
-        st.markdown("### 🚀 Demand Insights for Selected Event")
-        st.markdown(insights)
+       
         
         # Add visualization section
         st.markdown("### 📊 Demand Visualization")
