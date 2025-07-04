@@ -4,3 +4,4 @@ requests==2.31.0
 streamlit-searchbox==0.1.11
 googlemaps==4.10.0
 
+groq
