@@ -1,3 +1,4 @@
+# map.py
 import streamlit as st
 import pydeck as pdk
 import pandas as pd
@@ -66,6 +67,11 @@ def show_map(lat, lon, radius_meters, events):
 
     st.pydeck_chart(
         pdk.Deck(
+            # *** ADDED/MODIFIED LINES ***
+            # Use a free OSM-based map style from Carto
+            map_provider="carto",
+            map_style=pdk.map_styles.CARTO_LIGHT, 
+            # ****************************
             tooltip={
                 "html": """
                     <p><b>{title}</b></p>
@@ -115,7 +121,7 @@ def show_map(lat, lon, radius_meters, events):
                     data=walmart_features,
                     get_position="geometry.coordinates",
                     get_radius=100,
-                    get_fill_color=[255, 255, 0, 180],  # Red color for Walmart locations
+                    get_fill_color=[255, 255, 0, 180],  # Yellow color for Walmart locations
                     pickable=True,
                     auto_highlight=True,
                     tooltip={
@@ -165,5 +171,3 @@ def show_map(lat, lon, radius_meters, events):
         )
         
     )
-
-    

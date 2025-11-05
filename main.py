@@ -1,10 +1,8 @@
+# main.py
 import streamlit as st
+# import uuid # No longer needed for session token
 
-
-import uuid
-
-
-from groq import Groq  # Add to your imports
+from groq import Groq
 import datetime
 import pytz
 import pandas as pd
@@ -18,7 +16,9 @@ from utils.predicthq import (
     NON_ATTENDED_CATEGORIES,
     UNSCHEDULED_CATEGORIES,
 )
-from utils.google import places_autocomplete, get_place_details
+# Updated imports:
+from utils.walmart import search_walmart_stores, get_walmart_details
+from utils.osm import osm_autocomplete, get_osm_details
 from utils.map import show_map
 from utils.metrics import show_metrics
 from dateutil.parser import parse as parse_date
@@ -42,16 +42,15 @@ def main():
 """, unsafe_allow_html=True)
     
     # Initialize session state
-    if "google_session_token" not in st.session_state:
-        st.session_state.google_session_token = uuid.uuid4().hex
+    # We no longer need the google_session_token
+    # if "google_session_token" not in st.session_state:
+    #     st.session_state.google_session_token = uuid.uuid4().hex
 
     
     if get_api_key() is not None:
         show_address_lookup()
     else:
         st.warning("Please set a PredictHQ API Token.", icon="⚠️")
-
-
 
 
 def generate_demand_insights(event, walmart_data=None):
@@ -128,28 +127,19 @@ Focus on Walmart's top-selling inventory categories and private label brands (Gr
         return f"Error generating insights: {str(e)}"
 
     
-
-
-
+# Updated function
 def lookup_address(text):
-    if len(text) > 0:
-        results = places_autocomplete(text, session_token=st.session_state.google_session_token)
+    if len(text) > 3:
+        # Check if it's a Walmart store search
+        if "walmart" in text.lower():
+            search_term = text.lower().replace("walmart", "").strip()
+            if search_term:
+                results = search_walmart_stores(search_term)
+                # Format for st_searchbox
+                return [(r["description"], r["place_id"]) for r in results]
         
-        # Handle both Google Places and Walmart store results
-        formatted_results = []
-        for result in results:
-            if "place_id" in result:  # Walmart store result
-                formatted_results.append((
-                    str(result["description"]),
-                    result["place_id"],
-                ))
-            else:  # Google Places result
-                formatted_results.append((
-                    str(result["description"]),
-                    result["place_id"],
-                ))
-        
-        return formatted_results
+        # If not Walmart, do normal OSM search
+        return osm_autocomplete(text)
     else:
         return []
 
@@ -170,8 +160,7 @@ def show_address_lookup():
 
     place_id = st_searchbox(
         lookup_address,
-        # label="Discover nearby events that will fill your tables and boost your revenue :",
-        placeholder="e.g. 123 Main St, Anytown, USA",
+        placeholder="e.g. 123 Main St, Anytown, USA or Walmart ...",
         clear_on_submit=True,
         key="address",
     )
@@ -184,30 +173,28 @@ def show_address_lookup():
 
 # Remove the @st.cache_data decorator from this function
 def show_location_insights(place_id):
-    # Lookup place details
-    place_details = get_place_details(
-        place_id=place_id,
-        session_token=st.session_state.google_session_token,
-    )
+    
+    place_details = None
+    is_walmart = False
+
+    # Check if it's a Walmart store place_id
+    if place_id.startswith("walmart_"):
+        is_walmart = True
+        place_details = get_walmart_details(place_id)
+    else:
+        # Otherwise, it's an address from OSM. Get its details.
+        place_details = get_osm_details(place_id)
     
     if place_details is None:
         st.error("Could not retrieve location details")
         return
 
-    # Check if it's a Walmart store
-    is_walmart = place_id.startswith("walmart_")
-    
-    if is_walmart:
-        name = place_details["result"]["name"]
-        lat = place_details["result"]["geometry"]["location"]["lat"]
-        lon = place_details["result"]["geometry"]["location"]["lng"]
-        address = place_details["result"]["formatted_address"]
-        walmart_data = place_details["result"].get("walmart_data", {})
-    else:
-        name = place_details["result"]["name"]
-        lat = place_details["result"]["geometry"]["location"]["lat"]
-        lon = place_details["result"]["geometry"]["location"]["lng"]
-        address = place_details["result"]["formatted_address"]
+    # Unpack details (structure is the same for both)
+    name = place_details["result"]["name"]
+    lat = place_details["result"]["geometry"]["location"]["lat"]
+    lon = place_details["result"]["geometry"]["location"]["lng"]
+    address = place_details["result"]["formatted_address"]
+    walmart_data = place_details["result"].get("walmart_data", {}) # Only present if is_walmart
 
     tz = "UTC"
     date_from = datetime.datetime.now().date()
@@ -257,7 +244,6 @@ def show_location_insights(place_id):
             st.write(f"**[View on Walmart.com]({walmart_data.get('url', '')})**")
 
     show_events_list(events)  # This contains widgets
-
 
 
 @st.cache_data
