@@ -198,7 +198,7 @@ def show_location_insights(place_id):
 
     tz = "UTC"
     date_from = datetime.datetime.now().date()
-    date_to = date_from + datetime.timedelta(days=90)
+    date_to = date_from + datetime.timedelta(days=85)
     categories = ATTENDED_CATEGORIES
     suggested_radius_industry = st.secrets["suggested_radius_industry"] if "suggested_radius_industry" in st.secrets else "accommodation"
 
